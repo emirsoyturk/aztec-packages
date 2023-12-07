@@ -36,6 +36,7 @@ export {
   computeMessageSecretHash,
   CheatCodes,
   AztecAddressLike,
+  FunctionSelectorLike,
   isContractDeployed,
   EthCheatCodes,
   computeAuthWitMessageHash,
