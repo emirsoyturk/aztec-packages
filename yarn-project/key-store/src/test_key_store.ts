@@ -12,7 +12,7 @@ export class TestKeyStore implements KeyStore {
   private accounts: KeyPair[] = [];
   constructor(private curve: Grumpkin) {}
 
-  public addAccount(privKey: GrumpkinPrivateKey): PublicKey {
+  public addAccount(privKey: GrumpkinPrivateKey): Promise<PublicKey> {
     const keyPair = ConstantKeyPair.fromPrivateKey(this.curve, privKey);
 
     // check if private key has already been used
@@ -22,7 +22,7 @@ export class TestKeyStore implements KeyStore {
     }
 
     this.accounts.push(keyPair);
-    return keyPair.getPublicKey();
+    return Promise.resolve(keyPair.getPublicKey());
   }
 
   public createAccount(): Promise<PublicKey> {
