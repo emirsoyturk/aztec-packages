@@ -59,8 +59,8 @@ struct CombinedAccumulatedData {
 struct FinalAccumulatedData {
     aggregation_object: AggregationObject,
 
-    new_commitments: [SideEffect; MAX_NEW_COMMITMENTS_PER_TX],
-    new_nullifiers: [SideEffectLinkedToNoteHash; MAX_NEW_NULLIFIERS_PER_TX],
+    new_commitments: [Field; MAX_NEW_COMMITMENTS_PER_TX],
+    new_nullifiers: [Field; MAX_NEW_NULLIFIERS_PER_TX],
     // TODO: delete nullified_commitments
     nullified_commitments: [Field; MAX_NEW_NULLIFIERS_PER_TX],
 
@@ -152,8 +152,9 @@ impl CombinedAccumulatedDataBuilder {
         FinalAccumulatedData {
             aggregation_object: self.aggregation_object,
 
-            new_commitments: self.new_commitments.storage,
-            new_nullifiers: self.new_nullifiers.storage,
+            // strip away side effect counter because we dont need it anymore
+            new_commitments: self.new_commitments.storage.map(|c: SideEffect| c.value),
+            new_nullifiers: self.new_nullifiers.storage.map(|n: SideEffectLinkedToNoteHash| n.value),
             nullified_commitments: self.nullified_commitments.storage,
 
             private_call_stack: self.private_call_stack.storage,
