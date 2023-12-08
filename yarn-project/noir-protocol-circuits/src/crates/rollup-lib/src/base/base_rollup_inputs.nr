@@ -176,7 +176,7 @@ impl BaseRollupInputs {
 
             for j in 0..MAX_NEW_COMMITMENTS_PER_TX {
                 // TODO(Maddiaa): batch insert
-                commitment_tree_leaves[i * MAX_NEW_COMMITMENTS_PER_TX + j] =  new_commitments[j].value;
+                commitment_tree_leaves[i * MAX_NEW_COMMITMENTS_PER_TX + j] =  new_commitments[j];
             }
         }
 
@@ -188,7 +188,7 @@ impl BaseRollupInputs {
 
         for i in 0..2 {
             for j in 0..MAX_NEW_NULLIFIERS_PER_TX {
-                new_nullifiers[i * MAX_NEW_NULLIFIERS_PER_TX + j] = self.kernel_data[i].public_inputs.end.new_nullifiers[j].value;
+                new_nullifiers[i * MAX_NEW_NULLIFIERS_PER_TX + j] = self.kernel_data[i].public_inputs.end.new_nullifiers[j];
             }
         };
 
@@ -310,12 +310,12 @@ impl BaseRollupInputs {
             let mut offset = 0;
 
             for j in 0..MAX_NEW_COMMITMENTS_PER_TX {
-                calldata_hash_inputs[offset + i * MAX_NEW_COMMITMENTS_PER_TX + j] = new_commitments[j].value;
+                calldata_hash_inputs[offset + i * MAX_NEW_COMMITMENTS_PER_TX + j] = new_commitments[j];
             }
             offset += MAX_NEW_COMMITMENTS_PER_TX * 2;
 
             for j in 0..MAX_NEW_NULLIFIERS_PER_TX {
-                calldata_hash_inputs[offset + i * MAX_NEW_NULLIFIERS_PER_TX + j] = new_nullifiers[j].value;
+                calldata_hash_inputs[offset + i * MAX_NEW_NULLIFIERS_PER_TX + j] = new_nullifiers[j];
             }
             offset += MAX_NEW_NULLIFIERS_PER_TX * 2;
 
@@ -563,7 +563,6 @@ mod tests {
         abis::public_data_read::PublicDataRead,
         abis::public_data_update_request::PublicDataUpdateRequest,
         abis::previous_kernel_data::PreviousKernelData,
-        abis::side_effect::{SideEffect},
         tests::previous_kernel_data_builder::PreviousKernelDataBuilder,
         address::{Address, EthAddress},
         utils::bounded_vec::BoundedVec,
@@ -911,10 +910,7 @@ mod tests {
         let mut new_commitments_vec = builder.kernel_data[0].end.new_commitments;
 
         for i in 0..new_commitments.len() {
-            new_commitments_vec.push(SideEffect {
-                value: new_commitments[i],
-                counter: i,
-                });
+            new_commitments_vec.push(new_commitments[i]);
         }
 
         builder.kernel_data[0].end.new_commitments = new_commitments_vec;
