@@ -1,4 +1,4 @@
-import { ABIType, FunctionAbi, isAddressStruct } from '@aztec/foundation/abi';
+import { ABIType, FunctionAbi, isAddressStruct, isFunctionSelectorStruct } from '@aztec/foundation/abi';
 
 import { Fr } from '../fields/index.js';
 
@@ -73,6 +73,10 @@ class ArgumentEncoder {
         // an address field in it, we try to encode it as if it were a field directly.
         if (isAddressStruct(abiType) && typeof arg.address === 'undefined') {
           this.encodeArgument({ kind: 'field' }, arg, `${name}.address`);
+          break;
+        }
+        if (isFunctionSelectorStruct(abiType)) {
+          this.encodeArgument({ kind: 'field' }, arg, `${name}.selector`);
           break;
         }
         for (const field of abiType.fields) {
