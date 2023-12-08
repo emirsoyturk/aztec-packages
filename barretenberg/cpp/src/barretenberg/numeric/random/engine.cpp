@@ -13,7 +13,7 @@ auto generate_random_data()
 #ifdef BBERG_DEBUG_LOG
     // if we are debug logging, don't actually use randomness, defeats the intended use-case of comparing runs
     for (size_t i = 0; i < 32; i++) {
-        random_data[i] = unsigned(i + 1u);
+        random_data[i] = static_cast<unsigned int>(i + 1);
     }
 #else
     std::random_device source;
