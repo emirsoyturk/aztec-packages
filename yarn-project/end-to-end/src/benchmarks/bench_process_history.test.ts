@@ -1,5 +1,5 @@
 import { AztecNodeConfig, AztecNodeService } from '@aztec/aztec-node';
-import { Fr, GrumpkinScalar, INITIAL_L2_BLOCK_NUM, elapsed, sleep } from '@aztec/aztec.js';
+import { Fr, GrumpkinScalar, elapsed, sleep } from '@aztec/aztec.js';
 import { BenchmarkingContract } from '@aztec/noir-contracts/types';
 import { SequencerClient } from '@aztec/sequencer-client';
 import {
@@ -70,9 +70,8 @@ describe('benchmarks/process_history', () => {
         } satisfies NodeSyncedChainHistoryStats);
 
         // Create a new pxe and measure how much time it takes it to sync with failed and successful decryption
-        // Skip the first two blocks used for setup (create account contract and deploy benchmarking contract)
         context.logger(`Starting new pxe`);
-        const pxe = await waitNewPXESynced(node, contract, INITIAL_L2_BLOCK_NUM + SETUP_BLOCK_COUNT);
+        const pxe = await waitNewPXESynced(node, contract);
 
         // Register the owner account and wait until it's synced so we measure how much time it took
         context.logger(`Registering owner account on new pxe`);

@@ -1,4 +1,5 @@
 import { EthAddress } from '@aztec/foundation/eth-address';
+import { createDebugLogger } from '@aztec/foundation/log';
 
 import { Database, Key, RootDatabase, open } from 'lmdb';
 
@@ -18,6 +19,7 @@ export class AztecLmdbStore implements AztecKVStore {
   #data: Database<unknown, Key>;
   #multiMapData: Database<unknown, Key>;
   #rollupAddress: AztecSingleton<string>;
+  #log = createDebugLogger('aztec:kv-store:lmdb');
 
   constructor(rootDb: RootDatabase) {
     this.#rootDb = rootDb;
@@ -110,7 +112,11 @@ export class AztecLmdbStore implements AztecKVStore {
     const rollupAddressString = rollupAddress.toString();
 
     if (typeof storedRollupAddress === 'string' && rollupAddressString !== storedRollupAddress) {
-      await this.#rootDb.clearAsync();
+      this.#log.warn(
+        `Rollup address mismatch stored=${storedRollupAddress} deployed=${rollupAddressString}. Clearing database`,
+      );
+      await this.#data.clearAsync();
+      await this.#multiMapData.clearAsync();
     }
 
     await this.#rollupAddress.set(rollupAddressString);

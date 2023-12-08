@@ -92,10 +92,25 @@ export class PXEService implements PXE {
    * @returns A promise that resolves when the server has started successfully.
    */
   public async start() {
-    const { l2BlockPollingIntervalMS, l2StartingBlock } = this.config;
-    await this.synchronizer.start(l2StartingBlock, 1, l2BlockPollingIntervalMS);
+    const { l2BlockPollingIntervalMS } = this.config;
+    await this.restoreNoteProcessors();
+    await this.synchronizer.start(1, l2BlockPollingIntervalMS);
     const info = await this.getNodeInfo();
     this.log.info(`Started PXE connected to chain ${info.chainId} version ${info.protocolVersion}`);
+  }
+
+  private async restoreNoteProcessors() {
+    const publicKeys = await this.keyStore.getAccounts();
+    const publicKeysSet = new Set(publicKeys.map(k => k.toString()));
+
+    const registeredAddresses = await this.db.getCompleteAddresses();
+
+    for (const address of registeredAddresses) {
+      if (!publicKeysSet.has(address.publicKey.toString())) {
+        continue;
+      }
+      this.synchronizer.addAccount(address.publicKey, this.keyStore);
+    }
   }
 
   /**
@@ -128,7 +143,7 @@ export class PXEService implements PXE {
     const wasAdded = await this.db.addCompleteAddress(completeAddress);
     if (wasAdded) {
       const pubKey = await this.keyStore.addAccount(privKey);
-      this.synchronizer.addAccount(pubKey, this.keyStore, this.config.l2StartingBlock);
+      this.synchronizer.addAccount(pubKey, this.keyStore);
       this.log.info(`Registered account ${completeAddress.address.toString()}`);
       this.log.debug(`Registered account\n ${completeAddress.toReadableString()}`);
     } else {

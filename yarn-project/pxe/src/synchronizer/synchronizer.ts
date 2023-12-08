@@ -2,7 +2,7 @@ import { AztecAddress, BlockHeader, Fr, PublicKey } from '@aztec/circuits.js';
 import { computeGlobalsHash } from '@aztec/circuits.js/abis';
 import { DebugLogger, createDebugLogger } from '@aztec/foundation/log';
 import { InterruptibleSleep } from '@aztec/foundation/sleep';
-import { AztecNode, INITIAL_L2_BLOCK_NUM, KeyStore, L2BlockContext, L2BlockL2Logs, LogType } from '@aztec/types';
+import { AztecNode, KeyStore, L2BlockContext, L2BlockL2Logs, LogType } from '@aztec/types';
 import { NoteProcessorCaughtUpStats } from '@aztec/types/stats';
 
 import { PxeDatabase } from '../database/index.js';
@@ -20,8 +20,6 @@ export class Synchronizer {
   private noteProcessors: NoteProcessor[] = [];
   private interruptibleSleep = new InterruptibleSleep();
   private running = false;
-  private initialSyncBlockNumber = 0;
-  private synchedToBlock = 0;
   private log: DebugLogger;
   private noteProcessorsToCatchUp: NoteProcessor[] = [];
 
@@ -34,31 +32,27 @@ export class Synchronizer {
    * Continuously processes the fetched data for all note processors until stopped. If there is no data
    * available, it retries after a specified interval.
    *
-   * @param from - The starting position for fetching encrypted logs and blocks.
    * @param limit - The maximum number of encrypted, unencrypted logs and blocks to fetch in each iteration.
    * @param retryInterval - The time interval (in ms) to wait before retrying if no data is available.
    */
-  public async start(from = INITIAL_L2_BLOCK_NUM, limit = 1, retryInterval = 1000) {
+  public async start(limit = 1, retryInterval = 1000) {
     if (this.running) {
       return;
     }
     this.running = true;
 
-    if (from < this.synchedToBlock + 1) {
-      throw new Error(`From block ${from} is smaller than the currently synched block ${this.synchedToBlock}`);
-    }
-    this.synchedToBlock = from - 1;
-
     await this.initialSync();
 
     const run = async () => {
       while (this.running) {
+        const synchedToBlock = this.db.getBlockNumber();
+
         if (this.noteProcessorsToCatchUp.length > 0) {
           // There is a note processor that needs to catch up. We hijack the main loop to catch up the note processor.
-          await this.workNoteProcessorCatchUp(limit, retryInterval);
+          await this.workNoteProcessorCatchUp(synchedToBlock, limit, retryInterval);
         } else {
           // No note processor needs to catch up. We continue with the normal flow.
-          await this.work(limit, retryInterval);
+          await this.work(synchedToBlock + 1, limit, retryInterval);
         }
       }
     };
@@ -69,13 +63,10 @@ export class Synchronizer {
 
   protected async initialSync() {
     const [blockNumber, blockHeader] = await Promise.all([this.node.getBlockNumber(), this.node.getBlockHeader()]);
-    this.initialSyncBlockNumber = blockNumber;
-    this.synchedToBlock = this.initialSyncBlockNumber;
-    await this.db.setBlockHeader(blockHeader);
+    await this.db.setSynchronizedBlock(blockNumber, blockHeader);
   }
 
-  protected async work(limit = 1, retryInterval = 1000): Promise<void> {
-    const from = this.synchedToBlock + 1;
+  protected async work(from: number, limit = 1, retryInterval = 1000): Promise<void> {
     try {
       let encryptedLogs = await this.node.getLogs(from, limit, LogType.ENCRYPTED);
       if (!encryptedLogs.length) {
@@ -124,17 +115,15 @@ export class Synchronizer {
       for (const noteProcessor of this.noteProcessors) {
         await noteProcessor.process(blockContexts, encryptedLogs);
       }
-
-      this.synchedToBlock = latestBlock.block.number;
     } catch (err) {
       this.log.error(`Error in synchronizer work`, err);
       await this.interruptibleSleep.sleep(retryInterval);
     }
   }
 
-  protected async workNoteProcessorCatchUp(limit = 1, retryInterval = 1000): Promise<void> {
+  protected async workNoteProcessorCatchUp(toBlockNumber: number, limit = 1, retryInterval = 1000): Promise<void> {
     const noteProcessor = this.noteProcessorsToCatchUp[0];
-    if (noteProcessor.status.syncedToBlock === this.synchedToBlock) {
+    if (noteProcessor.status.syncedToBlock >= toBlockNumber) {
       // Note processor already synched, nothing to do
       this.noteProcessorsToCatchUp.shift();
       this.noteProcessors.push(noteProcessor);
@@ -143,7 +132,7 @@ export class Synchronizer {
 
     const from = noteProcessor.status.syncedToBlock + 1;
     // Ensuring that the note processor does not sync further than the main sync.
-    limit = Math.min(limit, this.synchedToBlock - from + 1);
+    limit = Math.min(limit, toBlockNumber - from + 1);
 
     if (limit < 1) {
       throw new Error(`Unexpected limit ${limit} for note processor catch up`);
@@ -176,7 +165,7 @@ export class Synchronizer {
       this.log(`Forwarding ${logCount} encrypted logs and blocks to note processor in catch up mode`);
       await noteProcessor.process(blockContexts, encryptedLogs);
 
-      if (noteProcessor.status.syncedToBlock === this.synchedToBlock) {
+      if (noteProcessor.status.syncedToBlock === toBlockNumber) {
         // Note processor caught up, move it to `noteProcessors` from `noteProcessorsToCatchUp`.
         this.log(`Note processor for ${noteProcessor.publicKey.toString()} has caught up`, {
           eventName: 'note-processor-caught-up',
@@ -189,16 +178,13 @@ export class Synchronizer {
         this.noteProcessors.push(noteProcessor);
       }
     } catch (err) {
-      this.log.error(`Error in synchronizer workNoteProcessorCatchUp`, err);
+      this.log.error(`Error in synchronizer workNoteProcessorCatchUp ${err}\n${(err as any).stack}`);
       await this.interruptibleSleep.sleep(retryInterval);
     }
   }
 
   private async setBlockDataFromBlock(latestBlock: L2BlockContext) {
     const { block } = latestBlock;
-    if (block.number < this.initialSyncBlockNumber) {
-      return;
-    }
 
     const globalsHash = computeGlobalsHash(latestBlock.block.globalVariables);
     const blockHeader = new BlockHeader(
@@ -212,7 +198,7 @@ export class Synchronizer {
       globalsHash,
     );
 
-    await this.db.setBlockHeader(blockHeader);
+    await this.db.setSynchronizedBlock(block.number, blockHeader);
   }
 
   /**
@@ -239,14 +225,14 @@ export class Synchronizer {
    * @param startingBlock - The block where to start scanning for notes for this accounts.
    * @returns A promise that resolves once the account is added to the Synchronizer.
    */
-  public addAccount(publicKey: PublicKey, keyStore: KeyStore, startingBlock: number) {
+  public addAccount(publicKey: PublicKey, keyStore: KeyStore) {
     const predicate = (x: NoteProcessor) => x.publicKey.equals(publicKey);
     const processor = this.noteProcessors.find(predicate) ?? this.noteProcessorsToCatchUp.find(predicate);
     if (processor) {
       return;
     }
 
-    this.noteProcessorsToCatchUp.push(new NoteProcessor(publicKey, keyStore, this.db, this.node, startingBlock));
+    this.noteProcessorsToCatchUp.push(new NoteProcessor(publicKey, keyStore, this.db, this.node));
   }
 
   /**
@@ -280,7 +266,8 @@ export class Synchronizer {
    */
   public async isGlobalStateSynchronized() {
     const latest = await this.node.getBlockNumber();
-    return latest <= this.synchedToBlock;
+    const lastBlockNumber = this.db.getBlockNumber();
+    return latest <= lastBlockNumber;
   }
 
   /**
@@ -288,8 +275,9 @@ export class Synchronizer {
    * @returns The latest block synchronized for blocks, and the latest block synched for notes for each public key being tracked.
    */
   public getSyncStatus() {
+    const lastBlockNumber = this.db.getBlockNumber();
     return {
-      blocks: this.synchedToBlock,
+      blocks: lastBlockNumber,
       notes: Object.fromEntries(this.noteProcessors.map(n => [n.publicKey.toString(), n.status.syncedToBlock])),
     };
   }

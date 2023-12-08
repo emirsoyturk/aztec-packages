@@ -1,15 +1,5 @@
 import { AztecNodeConfig, AztecNodeService } from '@aztec/aztec-node';
-import {
-  AztecNode,
-  BatchCall,
-  GrumpkinScalar,
-  INITIAL_L2_BLOCK_NUM,
-  PXE,
-  PartialAddress,
-  SentTx,
-  retryUntil,
-  sleep,
-} from '@aztec/aztec.js';
+import { AztecNode, BatchCall, GrumpkinScalar, PXE, PartialAddress, SentTx, retryUntil, sleep } from '@aztec/aztec.js';
 import { BenchmarkingContract } from '@aztec/noir-contracts/types';
 import { PXEService, createPXEService } from '@aztec/pxe';
 
@@ -102,15 +92,10 @@ export async function sendTxs(
  * Creates a new PXE and awaits until it's synced with the node.
  * @param node - Node to connect the pxe to.
  * @param contract - Benchmark contract to add to the pxe.
- * @param startingBlock - First l2 block to process.
  * @returns The new PXE.
  */
-export async function waitNewPXESynced(
-  node: AztecNode,
-  contract: BenchmarkingContract,
-  startingBlock: number = INITIAL_L2_BLOCK_NUM,
-): Promise<PXEService> {
-  const pxe = await createPXEService(node, { l2BlockPollingIntervalMS: 100, l2StartingBlock: startingBlock });
+export async function waitNewPXESynced(node: AztecNode, contract: BenchmarkingContract): Promise<PXEService> {
+  const pxe = await createPXEService(node, { l2BlockPollingIntervalMS: 100 });
   await pxe.addContracts([contract]);
   await retryUntil(() => pxe.isGlobalStateSynchronized(), 'pxe-global-sync');
   return pxe;

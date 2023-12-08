@@ -1,6 +1,7 @@
-import { BlockHeader, CompleteAddress, Fr, GrumpkinScalar } from '@aztec/circuits.js';
+import { BlockHeader, CompleteAddress, EthAddress, Fr, GrumpkinScalar } from '@aztec/circuits.js';
 import { Grumpkin } from '@aztec/circuits.js/barretenberg';
 import { TestKeyStore } from '@aztec/key-store';
+import { AztecLmdbStore } from '@aztec/kv-store';
 import { AztecNode, INITIAL_L2_BLOCK_NUM, L2Block, MerkleTreeId } from '@aztec/types';
 
 import { MockProxy, mock } from 'jest-mock-extended';
@@ -46,7 +47,7 @@ describe('Synchronizer', () => {
     aztecNode.getBlocks.mockResolvedValue([L2Block.fromFields(omit(block, 'newEncryptedLogs', 'newUnencryptedLogs'))]);
     aztecNode.getLogs.mockResolvedValueOnce([block.newEncryptedLogs!]).mockResolvedValue([block.newUnencryptedLogs!]);
 
-    await synchronizer.work();
+    await synchronizer.work(INITIAL_L2_BLOCK_NUM - 1);
 
     const roots = database.getTreeRoots();
     expect(roots[MerkleTreeId.CONTRACT_TREE]).toEqual(block.endContractTreeSnapshot.root);
@@ -68,7 +69,7 @@ describe('Synchronizer', () => {
     ]);
     aztecNode.getLogs.mockResolvedValue([block1.newEncryptedLogs!]).mockResolvedValue([block1.newUnencryptedLogs!]);
 
-    await synchronizer.work();
+    await synchronizer.work(INITIAL_L2_BLOCK_NUM - 1);
     const roots1 = database.getTreeRoots();
     expect(roots1[MerkleTreeId.CONTRACT_TREE]).toEqual(roots[MerkleTreeId.CONTRACT_TREE]);
     expect(roots1[MerkleTreeId.CONTRACT_TREE]).not.toEqual(block1.endContractTreeSnapshot.root);
@@ -79,7 +80,7 @@ describe('Synchronizer', () => {
       L2Block.fromFields(omit(block5, 'newEncryptedLogs', 'newUnencryptedLogs')),
     ]);
 
-    await synchronizer.work();
+    await synchronizer.work(INITIAL_L2_BLOCK_NUM - 1);
     const roots5 = database.getTreeRoots();
     expect(roots5[MerkleTreeId.CONTRACT_TREE]).not.toEqual(roots[MerkleTreeId.CONTRACT_TREE]);
     expect(roots5[MerkleTreeId.CONTRACT_TREE]).toEqual(block5.endContractTreeSnapshot.root);
@@ -96,37 +97,38 @@ describe('Synchronizer', () => {
       .mockResolvedValueOnce([block.newEncryptedLogs!]); // called by synchronizer.workNoteProcessorCatchUp
 
     // Sync the synchronizer so that note processor has something to catch up to
-    await synchronizer.work();
+    await synchronizer.work(INITIAL_L2_BLOCK_NUM - 1);
 
     // Used in synchronizer.isAccountStateSynchronized
     aztecNode.getBlockNumber.mockResolvedValueOnce(1);
 
     // Manually adding account to database so that we can call synchronizer.isAccountStateSynchronized
-    const keyStore = new TestKeyStore(new Grumpkin());
+    const kvStore = await AztecLmdbStore.create(EthAddress.random(), 'test');
+    const keyStore = new TestKeyStore(new Grumpkin(), kvStore);
     const privateKey = GrumpkinScalar.random();
     await keyStore.addAccount(privateKey);
     const completeAddress = CompleteAddress.fromPrivateKeyAndPartialAddress(privateKey, Fr.random());
     await database.addCompleteAddress(completeAddress);
 
     // Add the account which will add the note processor to the synchronizer
-    synchronizer.addAccount(completeAddress.publicKey, keyStore, INITIAL_L2_BLOCK_NUM);
+    synchronizer.addAccount(completeAddress.publicKey, keyStore);
 
-    await synchronizer.workNoteProcessorCatchUp();
+    await synchronizer.workNoteProcessorCatchUp(synchronizer.getSyncStatus().blocks);
 
     expect(await synchronizer.isAccountStateSynchronized(completeAddress.address)).toBe(true);
   });
 });
 
 class TestSynchronizer extends Synchronizer {
-  public work() {
-    return super.work();
+  public work(from: number) {
+    return super.work(from);
   }
 
   public initialSync(): Promise<void> {
     return super.initialSync();
   }
 
-  public workNoteProcessorCatchUp(): Promise<void> {
-    return super.workNoteProcessorCatchUp();
+  public workNoteProcessorCatchUp(to: number): Promise<void> {
+    return super.workNoteProcessorCatchUp(to);
   }
 }

@@ -29,7 +29,7 @@ describe('benchmarks/publish_rollup', () => {
       sequencer.restart();
 
       // Wait for the last tx to be processed and stop the current node
-      const { blockNumber } = await sentTxs[sentTxs.length - 1].wait({ timeout: 5 * 60_000 });
+      await sentTxs[sentTxs.length - 1].wait({ timeout: 5 * 60_000 });
       await context.teardown();
 
       // Create a new aztec node to measure sync time of the block
@@ -40,7 +40,7 @@ describe('benchmarks/publish_rollup', () => {
 
       // Spin up a new pxe and sync it, we'll use it to test sync times of new accounts for the last block
       context.logger(`Starting new pxe`);
-      const pxe = await waitNewPXESynced(node, contract, blockNumber! - 1);
+      const pxe = await waitNewPXESynced(node, contract);
 
       // Register the owner account and wait until it's synced so we measure how much time it took
       context.logger(`Registering owner account on new pxe`);
