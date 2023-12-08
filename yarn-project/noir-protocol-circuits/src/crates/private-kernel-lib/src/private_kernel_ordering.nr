@@ -331,7 +331,7 @@ mod tests {
         let new_nullifiers = builder.get_new_nullifiers();
 
         let public_inputs = builder.execute();
-        assert(array_eq(public_inputs.end.new_commitments, [unique_siloed_commitments[0].value]),
+        assert(array_eq(public_inputs.end.new_commitments, [unique_siloed_commitments[0].value]));
 
         // The nullifier at index 1 is chopped.
         let expected_new_nullifiers = [new_nullifiers[0].value, new_nullifiers[2].value];
