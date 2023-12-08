@@ -113,9 +113,8 @@ export class MemoryDB extends MemoryContractDatabase implements PxeDatabase {
     return roots;
   }
 
-  public setTreeRoots(roots: Record<MerkleTreeId, Fr>) {
+  private setTreeRoots(roots: Record<MerkleTreeId, Fr>) {
     this.treeRoots = roots;
-    return Promise.resolve();
   }
 
   public getBlockHeader(): BlockHeader {
@@ -135,9 +134,9 @@ export class MemoryDB extends MemoryContractDatabase implements PxeDatabase {
     );
   }
 
-  public async setBlockHeader(blockHeader: BlockHeader): Promise<void> {
+  public setBlockHeader(blockHeader: BlockHeader): Promise<void> {
     this.globalVariablesHash = blockHeader.globalVariablesHash;
-    await this.setTreeRoots({
+    this.setTreeRoots({
       [MerkleTreeId.NOTE_HASH_TREE]: blockHeader.noteHashTreeRoot,
       [MerkleTreeId.NULLIFIER_TREE]: blockHeader.nullifierTreeRoot,
       [MerkleTreeId.CONTRACT_TREE]: blockHeader.contractTreeRoot,
@@ -145,6 +144,8 @@ export class MemoryDB extends MemoryContractDatabase implements PxeDatabase {
       [MerkleTreeId.ARCHIVE]: blockHeader.archiveRoot,
       [MerkleTreeId.PUBLIC_DATA_TREE]: blockHeader.publicDataTreeRoot,
     });
+
+    return Promise.resolve();
   }
 
   public addCompleteAddress(completeAddress: CompleteAddress): Promise<boolean> {

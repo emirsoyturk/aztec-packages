@@ -80,17 +80,6 @@ export interface PxeDatabase extends ContractDatabase {
   getTreeRoots(): Record<MerkleTreeId, Fr>;
 
   /**
-   * Set the tree roots for the Merkle trees in the database.
-   * This function updates the 'treeRoots' property of the instance
-   * with the provided 'roots' object containing MerkleTreeId and Fr pairs.
-   * Note that this will overwrite any existing tree roots in the database.
-   *
-   * @param roots - A Record object mapping MerkleTreeIds to their corresponding Fr root values.
-   * @returns A Promise that resolves when the tree roots have been successfully updated in the database.
-   */
-  setTreeRoots(roots: Record<MerkleTreeId, Fr>): Promise<void>;
-
-  /**
    * Retrieve the stored Block Header from the database.
    * The function returns a Promise that resolves to the Block Header.
    * This data is required to reproduce block attestations.
