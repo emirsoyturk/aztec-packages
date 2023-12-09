@@ -31,12 +31,12 @@ use dep::types::constants::{
     NULLIFIER_SUBTREE_HEIGHT,
     NULLIFIER_TREE_HEIGHT,
 };
-use dep::types::abis::previous_kernel_data::PreviousKernelData;
+use dep::types::abis::previous_kernel_data::PreviousKernelDataFinal;
 use dep::types::abis::membership_witness::{NullifierMembershipWitness, MembershipWitness};
 use dep::types::abis::membership_witness::ArchiveRootMembershipWitness;
 
 struct BaseRollupInputs {
-    kernel_data: [PreviousKernelData; KERNELS_PER_BASE_ROLLUP],
+    kernel_data: [PreviousKernelDataFinal; KERNELS_PER_BASE_ROLLUP],
     start_note_hash_tree_snapshot: AppendOnlyTreeSnapshot,
     start_nullifier_tree_snapshot: AppendOnlyTreeSnapshot,
     start_contract_tree_snapshot: AppendOnlyTreeSnapshot,
@@ -176,7 +176,7 @@ impl BaseRollupInputs {
 
             for j in 0..MAX_NEW_COMMITMENTS_PER_TX {
                 // TODO(Maddiaa): batch insert
-                commitment_tree_leaves[i * MAX_NEW_COMMITMENTS_PER_TX + j] =  new_commitments[j];
+                commitment_tree_leaves[i * MAX_NEW_COMMITMENTS_PER_TX + j] =  new_commitments[j].value;
             }
         }
 
@@ -910,7 +910,10 @@ mod tests {
         let mut new_commitments_vec = builder.kernel_data[0].end.new_commitments;
 
         for i in 0..new_commitments.len() {
-            new_commitments_vec.push(new_commitments[i]);
+            new_commitments_vec.push(SideEffect{
+                value: new_commitments[i],
+                counter: i,
+            });
         }
 
         builder.kernel_data[0].end.new_commitments = new_commitments_vec;
