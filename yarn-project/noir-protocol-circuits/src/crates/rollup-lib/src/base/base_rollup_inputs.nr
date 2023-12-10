@@ -535,6 +535,7 @@ mod tests {
         abis::base_or_merge_rollup_public_inputs::BaseOrMergeRollupPublicInputs,
         abis::nullifier_leaf_preimage::NullifierLeafPreimage,
         abis::constant_rollup_data::ConstantRollupData,
+        abis::side_effect::SideEffect,
         tests::merkle_tree_utils::{NonEmptyMerkleTree, compute_zero_hashes},
         components,
     };
@@ -910,7 +911,10 @@ mod tests {
         let mut new_commitments_vec = builder.kernel_data[0].end.new_commitments;
 
         for i in 0..new_commitments.len() {
-            new_commitments_vec.push(new_commitments[i].value);
+            new_commitments_vec.push(SideEffect{
+                value: new_commitments[i],
+                counter: 0,
+                });
         }
 
         builder.kernel_data[0].end.new_commitments = new_commitments_vec;
