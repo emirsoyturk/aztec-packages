@@ -310,12 +310,12 @@ impl BaseRollupInputs {
             let mut offset = 0;
 
             for j in 0..MAX_NEW_COMMITMENTS_PER_TX {
-                calldata_hash_inputs[offset + i * MAX_NEW_COMMITMENTS_PER_TX + j] = new_commitments[j];
+                calldata_hash_inputs[offset + i * MAX_NEW_COMMITMENTS_PER_TX + j] = new_commitments[j].value;
             }
             offset += MAX_NEW_COMMITMENTS_PER_TX * 2;
 
             for j in 0..MAX_NEW_NULLIFIERS_PER_TX {
-                calldata_hash_inputs[offset + i * MAX_NEW_NULLIFIERS_PER_TX + j] = new_nullifiers[j];
+                calldata_hash_inputs[offset + i * MAX_NEW_NULLIFIERS_PER_TX + j] = new_nullifiers[j].value;
             }
             offset += MAX_NEW_NULLIFIERS_PER_TX * 2;
 
@@ -910,7 +910,7 @@ mod tests {
         let mut new_commitments_vec = builder.kernel_data[0].end.new_commitments;
 
         for i in 0..new_commitments.len() {
-            new_commitments_vec.push(new_commitments[i]);
+            new_commitments_vec.push(new_commitments[i].value);
         }
 
         builder.kernel_data[0].end.new_commitments = new_commitments_vec;
