@@ -152,7 +152,7 @@ impl CombinedAccumulatedDataBuilder {
         FinalAccumulatedData {
             aggregation_object: self.aggregation_object,
 
-            // strip away side effect struct wrapper because we dont need it anymore
+            // strip away side effect counter because we dont need it anymore
             new_commitments: self.new_commitments.storage.map(|c: SideEffect| c.value),
             new_nullifiers: self.new_nullifiers.storage.map(|n: SideEffectLinkedToNoteHash| n.value),
             nullified_commitments: self.nullified_commitments.storage,
