@@ -70,6 +70,7 @@ export interface PublicDataRead {
 export interface CombinedAccumulatedData {
   aggregation_object: AggregationObject;
   read_requests: FixedLengthArray<Field, 128>;
+  pending_read_requests: FixedLengthArray<Field, 128>;
   new_commitments: FixedLengthArray<Field, 64>;
   new_nullifiers: FixedLengthArray<Field, 64>;
   nullified_commitments: FixedLengthArray<Field, 64>;
@@ -96,7 +97,7 @@ export interface Block {
 }
 
 export interface BlockHeader {
-  archive_root: Field;
+  blocks_tree_root: Field;
   block: Block;
   private_kernel_vk_tree_root: Field;
 }
