@@ -176,7 +176,7 @@ impl BaseRollupInputs {
 
             for j in 0..MAX_NEW_COMMITMENTS_PER_TX {
                 // TODO(Maddiaa): batch insert
-                commitment_tree_leaves[i * MAX_NEW_COMMITMENTS_PER_TX + j] =  new_commitments[j];
+                commitment_tree_leaves[i * MAX_NEW_COMMITMENTS_PER_TX + j] =  new_commitments[j].value;
             }
         }
 
@@ -188,7 +188,7 @@ impl BaseRollupInputs {
 
         for i in 0..2 {
             for j in 0..MAX_NEW_NULLIFIERS_PER_TX {
-                new_nullifiers[i * MAX_NEW_NULLIFIERS_PER_TX + j] = self.kernel_data[i].public_inputs.end.new_nullifiers[j];
+                new_nullifiers[i * MAX_NEW_NULLIFIERS_PER_TX + j] = self.kernel_data[i].public_inputs.end.new_nullifiers[j].value;
             }
         };
 
@@ -678,7 +678,7 @@ mod tests {
 
                     let low_index = self.new_nullifiers.get_unchecked(original_index as Field).existing_index;
 
-                    kernel_data[0].public_inputs.end.new_nullifiers[original_index] = new_nullifier;
+                    kernel_data[0].public_inputs.end.new_nullifiers[original_index].value = new_nullifier;
 
                     let mut low_preimage = pre_existing_nullifiers[low_index];
                     low_nullifier_leaf_preimages[i] = low_preimage;
