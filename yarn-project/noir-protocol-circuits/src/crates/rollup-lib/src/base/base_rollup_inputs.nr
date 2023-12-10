@@ -535,7 +535,6 @@ mod tests {
         abis::base_or_merge_rollup_public_inputs::BaseOrMergeRollupPublicInputs,
         abis::nullifier_leaf_preimage::NullifierLeafPreimage,
         abis::constant_rollup_data::ConstantRollupData,
-        abis::side_effect::SideEffect,
         tests::merkle_tree_utils::{NonEmptyMerkleTree, compute_zero_hashes},
         components,
     };
@@ -564,6 +563,7 @@ mod tests {
         abis::public_data_read::PublicDataRead,
         abis::public_data_update_request::PublicDataUpdateRequest,
         abis::previous_kernel_data::PreviousKernelData,
+        abis::side_effect::SideEffect,
         tests::previous_kernel_data_builder::PreviousKernelDataBuilder,
         address::{Address, EthAddress},
         utils::bounded_vec::BoundedVec,
